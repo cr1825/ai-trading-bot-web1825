@@ -4,5 +4,5 @@ numpy
 matplotlib
 scikit-learn==1.3.2
 fyers-apiv2==2.0.5
-pillow==10.2.0
+pillow==9.4.0
 
