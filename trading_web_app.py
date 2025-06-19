@@ -9,7 +9,8 @@ st.set_page_config(layout="wide")
 st.title("AI Trading Bot - Stock Price Prediction")
 
 # API key placeholder
-API_KEY = "YOUR_API_KEY_HERE"
+API_KEY = st.secrets["API_KEY"]
+
 
 # User inputs
 ticker = st.text_input("Enter Stock Symbol (e.g., AAPL, MSFT, RELIANCE.BSE)", "AAPL")
