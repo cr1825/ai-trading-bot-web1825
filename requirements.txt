@@ -1,5 +1,5 @@
 streamlit
-fyers-apiv2
+fyers-apiv2==2.0.5
 pandas
 numpy
 scikit-learn==1.3.2
