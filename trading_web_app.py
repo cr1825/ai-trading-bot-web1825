@@ -9,7 +9,13 @@ st.set_page_config(layout="wide")
 st.title("AI Trading Bot - Stock Price Prediction")
 
 # API key placeholder
-API_KEY = st.secrets["API_KEY"]
+from streamlit import secrets
+
+client_id = secrets["FYERS_CLIENT_ID"]
+access_token = secrets["FYERS_ACCESS_TOKEN"]
+
+fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path=None)
+
 
 
 # User inputs
@@ -17,19 +23,25 @@ ticker = st.text_input("Enter Stock Symbol (e.g., AAPL, MSFT, RELIANCE.BSE)", "A
 
 # Fetch stock data
 @st.cache_data
-def fetch_stock_data(symbol, api_key, outputsize="compact"):
-    ts = TimeSeries(key=api_key, output_format='pandas')
-    try:
-        data, _ = ts.get_daily(symbol=symbol, outputsize=outputsize)
-        data = data.rename(columns={
-            '1. open': 'Open',
-            '2. high': 'High',
-            '3. low': 'Low',
-            '4. close': 'Close',
-            '5. volume': 'Volume'
-        })
-        data.sort_index(inplace=True)
-        return data
+def fetch_stock_data(symbol):
+    payload = {
+        "symbol": f"NSE:{symbol}-EQ",  # example: RELIANCE → NSE:RELIANCE-EQ
+        "resolution": "D",
+        "date_format": "1",
+        "range_from": "2023-01-01",
+        "range_to": "2024-06-01",
+        "cont_flag": "1"
+    }
+    response = fyers.history(payload)
+    if "candles" not in response:
+        st.error(f"Error fetching data from Fyers: {response}")
+        return pd.DataFrame()
+
+    df = pd.DataFrame(response["candles"], columns=["timestamp", "Open", "High", "Low", "Close", "Volume"])
+    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
+    df.set_index("timestamp", inplace=True)
+    return df
+
     except Exception as e:
         st.error(f"Error fetching data: {e}")
         return pd.DataFrame()
