@@ -1,7 +1,6 @@
 streamlit
-alpha_vantage
+fyers-apiv2
 pandas
 numpy
 scikit-learn
 matplotlib
-fyers-apiv2
