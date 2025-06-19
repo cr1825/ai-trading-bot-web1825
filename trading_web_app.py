@@ -2,55 +2,56 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
-from alpha_vantage.timeseries import TimeSeries
 import matplotlib.pyplot as plt
-
-st.set_page_config(layout="wide")
-st.title("AI Trading Bot - Stock Price Prediction")
-
-# API key placeholder
+from fyers_apiv2 import fyersModel
 from streamlit import secrets
 
+# Set page layout
+st.set_page_config(layout="wide")
+st.title("AI Trading Bot - Stock Price Prediction (Fyers API)")
+
+# Fyers credentials from Streamlit secrets
 client_id = secrets["FYERS_CLIENT_ID"]
 access_token = secrets["FYERS_ACCESS_TOKEN"]
 
+# Initialize Fyers
 fyers = fyersModel.FyersModel(client_id=client_id, token=access_token, log_path=None)
 
-
-
-# User inputs
-ticker = st.text_input("Enter Stock Symbol (e.g., AAPL, MSFT, RELIANCE.BSE)", "AAPL")
+# User input for ticker
+ticker = st.text_input("Enter Stock Symbol (e.g., RELIANCE, TCS, RPOWER)", "RELIANCE")
 
 # Fetch stock data
 @st.cache_data
 def fetch_stock_data(symbol):
-    payload = {
-        "symbol": f"NSE:{symbol}-EQ",  # example: RELIANCE → NSE:RELIANCE-EQ
-        "resolution": "D",
-        "date_format": "1",
-        "range_from": "2023-01-01",
-        "range_to": "2024-06-01",
-        "cont_flag": "1"
-    }
-    response = fyers.history(payload)
-    if "candles" not in response:
-        st.error(f"Error fetching data from Fyers: {response}")
-        return pd.DataFrame()
+    try:
+        payload = {
+            "symbol": f"NSE:{symbol}-EQ",
+            "resolution": "D",
+            "date_format": "1",
+            "range_from": "2023-01-01",
+            "range_to": "2024-06-01",
+            "cont_flag": "1"
+        }
+        response = fyers.history(payload)
+        if "candles" not in response or not response["candles"]:
+            st.error(f"Error fetching data from Fyers: {response}")
+            return pd.DataFrame()
 
-    df = pd.DataFrame(response["candles"], columns=["timestamp", "Open", "High", "Low", "Close", "Volume"])
-    df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
-    df.set_index("timestamp", inplace=True)
-    return df
+        df = pd.DataFrame(response["candles"], columns=["timestamp", "Open", "High", "Low", "Close", "Volume"])
+        df["timestamp"] = pd.to_datetime(df["timestamp"], unit="s")
+        df.set_index("timestamp", inplace=True)
+        return df
 
     except Exception as e:
-        st.error(f"Error fetching data: {e}")
+        st.error(f"Exception while fetching data: {e}")
         return pd.DataFrame()
 
+# Run the prediction
 if st.button("Run Prediction"):
-    data = fetch_stock_data(ticker, API_KEY)
+    data = fetch_stock_data(ticker)
 
     if data.empty or len(data) < 60:
-        st.error("Insufficient data. Try another symbol or check API key.")
+        st.error("Insufficient data. Try another symbol or check Fyers credentials.")
     else:
         # Feature engineering
         data['MA10'] = data['Close'].rolling(window=10).mean()
@@ -89,6 +90,11 @@ if st.button("Run Prediction"):
             fig, ax = plt.subplots(figsize=(14, 6))
             ax.plot(data_test['Close'].values, label='Actual Close')
             ax.plot(data_test['Predicted_Close'].values, label='Predicted Close')
+            ax.set_title(f"{ticker.upper()} - Predicted vs Actual")
+            ax.legend()
+            ax.grid(True)
+            st.pyplot(fig)
+
             ax.set_title(f"{ticker} - Predicted vs Actual")
             ax.legend()
             ax.grid(True)
